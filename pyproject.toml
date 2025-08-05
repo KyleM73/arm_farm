@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "arm_farm"
+version = "0.0.1"
+authors = [
+  { name="Kyle Morgenstein", email="kyle.morgenstein@gmail.com" },
+]
+description = "Robot arm deployment code"
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "mujoco",
+    "numpy",
+    "matplotlib",
+    "pin",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/KyleM73/arm_farm"
+"Bug Tracker" = "https://github.com/KyleM73/arm_farm/issues"
+
+# [project.scripts]
+# sim = "arm_farm.sim.simulate:main"
