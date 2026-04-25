@@ -6,7 +6,7 @@ import os
 def main():
     # Use importlib.resources to find the path to the 'robots' package directory.
     # This makes the script runnable from anywhere.
-    robots_package_path = str(resources.files('arm_farm.robots'))
+    robots_package_path = str(resources.files('arm_farm.assets'))
     xml = os.path.join(robots_package_path, 'scene.xml')
 
     try:

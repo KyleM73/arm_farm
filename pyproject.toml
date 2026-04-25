@@ -17,15 +17,25 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
+    "cmake>=3.29.0.1",
+    "einops>=0.8.0",
     "mujoco",
     "numpy",
+    "torch>=2.2.1",
     "matplotlib",
     "pin",
+    "packaging>=24.2",
+    "pynput>=1.7.7",
+    "pyserial>=3.5",
+    "ffmpeg",
+    "feetech-servo-sdk>=1.0.0",
+    "hydra-core",
+    "eclipse-zenoh"
 ]
 
 [project.urls]
 "Homepage" = "https://github.com/KyleM73/arm_farm"
 "Bug Tracker" = "https://github.com/KyleM73/arm_farm/issues"
 
-# [project.scripts]
-# sim = "arm_farm.sim.simulate:main"
+[project.scripts]
+port = "arm_farm.utils.find_port:main"
