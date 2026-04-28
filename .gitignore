@@ -1,0 +1,33 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+*.egg-info/
+*.egg
+
+# Virtual environments
+.venv/
+
+# Tooling caches
+.ruff_cache/
+.ty_cache/
+.pytest_cache/
+
+# uv
+uv.lock.bak
+
+# Editors / IDEs
+.vscode/
+.idea/
+
+# macOS
+.DS_Store
+
+# Robotics / training artifacts
+outputs/
+data/
+wandb/
+*.safetensors
+*.ckpt

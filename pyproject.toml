@@ -1,0 +1,80 @@
+[project]
+name = "arm-farm"
+version = "0.2.0"
+description = "SO-ARM101 data collection and behavior cloning policies built on lerobot"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    # `feetech` is the SO-ARM100/101 servo SDK; `core_scripts` unlocks
+    # lerobot-record / lerobot-replay / lerobot-teleoperate / lerobot-calibrate.
+    "lerobot[feetech,core_scripts]",
+]
+
+[project.optional-dependencies]
+# Pull these in lazily so a base sync stays slim. Pick one of these (or
+# combine) when you're ready to train: `uv sync --extra act` etc.
+training = ["lerobot[training]"]              # accelerate + wandb + dataset
+act = ["lerobot[training]"]                   # ACT ships in core; just needs training stack
+diffusion = ["lerobot[training,diffusion]"]
+smolvla = ["lerobot[training,smolvla]"]
+pi = ["lerobot[training,pi]"]
+kinematics = ["lerobot[kinematics]"]          # placo IK for end-effector teleop
+intelrealsense = ["lerobot[intelrealsense]"]
+all = ["lerobot[all]"]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14",
+    "ty>=0.0.30",
+    "pytest>=8.0",
+]
+
+# ---------------- uv-specific configuration ----------------
+
+# Track the live `main` branch of lerobot. `uv sync` will clone it into the
+# uv git cache and install it into the project venv. Bump the lock with
+# `uv lock --upgrade-package lerobot` to pull a fresher commit.
+[tool.uv.sources]
+lerobot = { git = "https://github.com/huggingface/lerobot.git", branch = "main" }
+
+# Build the `arm_farm` package itself so `import arm_farm` works inside the
+# venv (needed by the typed presets in src/arm_farm/, and later required so
+# lerobot can discover registered custom policies). uv's own build backend
+# auto-detects the src/<package>/ layout.
+[build-system]
+requires = ["uv_build>=0.8.4,<0.9.0"]
+build-backend = "uv_build"
+
+# ---------------- Tooling ----------------
+
+[tool.ruff]
+target-version = "py312"
+line-length = 110
+extend-exclude = ["outputs", "data", "wandb"]
+
+[tool.ruff.lint]
+select = [
+    "E", "W",   # pycodestyle
+    "F",        # pyflakes
+    "I",        # isort
+    "B",        # bugbear
+    "C4",       # comprehensions
+    "N",        # pep8-naming
+    "UP",       # pyupgrade
+    "SIM",      # simplify
+    "RUF",      # ruff-specific
+]
+ignore = ["E501"]  # long lines are OK, formatter handles wrapping
+
+[tool.ruff.lint.isort]
+known-first-party = ["arm_farm"]
+
+[tool.ruff.format]
+quote-style = "double"
+docstring-code-format = true
+
+[tool.ty.environment]
+python-version = "3.12"
+
+[tool.ty.src]
+include = ["src", "scripts"]
