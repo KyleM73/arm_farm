@@ -21,6 +21,21 @@ pi = ["lerobot[training,pi]"]
 kinematics = ["lerobot[kinematics]"]          # placo IK for end-effector teleop
 intelrealsense = ["lerobot[intelrealsense]"]
 all = ["lerobot[all]"]
+# Sim path: mjlab + mujoco-warp. On Linux x86_64 pulls cu128 torch / nvidia
+# warp-lang for training; on macOS arm64 the markers fall back to PyPI torch
+# (CPU) and PyPI warp-lang, which is enough for `play` / `replay` only.
+sim = ["mjlab[cu128]", "torch>=2.7.0", "onnxruntime>=1.19.0"]
+
+# Tells mjlab to import `arm_farm.sim` at startup, which registers the
+# Cube / Cube-Rgb / Cube-Depth / Play tasks and the mujoco_so101 Robot.
+[project.entry-points."mjlab.tasks"]
+arm_farm = "arm_farm.sim"
+
+# Native MuJoCo + mjviser preview entry point. Bypasses mjwarp for ~10x
+# faster Mac playback; supports scripted action sources and ONNX policy
+# checkpoints exported by mjlab's `ManipulationOnPolicyRunner`.
+[project.scripts]
+arm-farm-play-native = "arm_farm.sim.play_native:cli"
 
 [dependency-groups]
 dev = [
@@ -34,8 +49,42 @@ dev = [
 # Track the live `main` branch of lerobot. `uv sync` will clone it into the
 # uv git cache and install it into the project venv. Bump the lock with
 # `uv lock --upgrade-package lerobot` to pull a fresher commit.
+#
+# mjlab is also tracked from `main` (post-v1.3.0). The transitive deps
+# below — torch, warp-lang, mujoco, mujoco-warp, mjviser — need their indices
+# replicated here because uv does NOT inherit `[tool.uv.sources]` from non-
+# workspace dependencies; this matches mjlab_playground's pattern.
 [tool.uv.sources]
 lerobot = { git = "https://github.com/huggingface/lerobot.git", branch = "main" }
+# mjlab v1.3.0 pins mujoco-warp to a pre-MuJoCo-3.8.0 commit; py.mujoco.org
+# publishes the 3.8.x dev nightlies which the older mujoco-warp can't import.
+# Tracking mjlab `main` picks up the post-v1.3.0 mujoco 3.8 bump. Refresh
+# with `uv lock --upgrade-package mjlab`.
+mjlab = { git = "https://github.com/mujocolab/mjlab", branch = "main" }
+mujoco = { index = "mujoco" }
+mjviser = { git = "https://github.com/mujocolab/mjviser", rev = "1bdfd6fe79066b847a5f430000fcfbb53ec31a6f" }
+warp-lang = { index = "nvidia", marker = "sys_platform != 'darwin'" }
+torch = [
+  { index = "pytorch-cu128", extra = "sim", marker = "sys_platform != 'darwin'" },
+]
+
+[tool.uv]
+override-dependencies = ["mujoco>=3.8.0.dev0"]
+
+[[tool.uv.index]]
+name = "nvidia"
+url = "https://pypi.nvidia.com/"
+explicit = true
+
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[[tool.uv.index]]
+name = "mujoco"
+url = "https://py.mujoco.org"
+explicit = true
 
 # Build the `arm_farm` package itself so `import arm_farm` works inside the
 # venv (needed by the typed presets in src/arm_farm/, and later required so
@@ -78,3 +127,15 @@ python-version = "3.12"
 
 [tool.ty.src]
 include = ["src", "scripts"]
+
+# `mujoco`'s C-extension members aren't visible to ty's static analysis, so
+# any direct `mujoco.MjModel` / `mujoco.mj_step` / etc. access trips
+# `unresolved-attribute`. Suppress just for the files that touch raw mujoco.
+[[tool.ty.overrides]]
+include = [
+    "src/arm_farm/sim/assets/so101/so101_constants.py",
+    "src/arm_farm/sim/play_native.py",
+    "src/arm_farm/sim/tests/test_play_native.py",
+]
+[tool.ty.overrides.rules]
+unresolved-attribute = "ignore"
