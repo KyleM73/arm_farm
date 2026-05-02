@@ -16,6 +16,20 @@
   </asset>
   <worldbody>
     <light pos="0.3 0 1.0" dir="0 0 -1" castshadow="false"/>
-    <camera name="front" pos="0.45 0 0.30" xyaxes="0 -1 0 0 0 1" fovy="58"/>
+    <!--
+      Front camera at world (0.55, 0, 0.35) looking back at workspace centre
+      (0.20, 0, 0.05). The cube spawn range is x in [0.25, 0.40], so this
+      pose keeps the cube well in-frame across its full spawn distribution.
+
+      Tuning notes:
+      * ``pos`` (x y z): world-frame position of the camera body.
+      * ``xyaxes`` (six numbers): the first three are the camera's +x axis
+        (image right) in world coords; the last three are +y (image up).
+        The optical axis is -z_cam where z_cam = x_cam x y_cam. Recompute
+        xyaxes any time you change ``pos`` so the camera still points at the
+        workspace centre.
+      * ``fovy``: vertical full-angle FOV in degrees (58 matches the real lens).
+    -->
+    <camera name="front" pos="0.55 0 0.35" xyaxes="0 1 0 -0.651 0 0.760" fovy="58"/>
   </worldbody>
 </mujoco>

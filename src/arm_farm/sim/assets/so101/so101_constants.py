@@ -50,11 +50,17 @@ def _add_ee_site(spec: mujoco.MjSpec) -> None:
     # Grasp point sits ~10 cm below the gripper body origin, between the static
     # jaw and the moving jaw. Refine in the viewer alongside the real
     # RealSense / D405 mount once one is attached.
+    #
+    # ``group=5`` keeps the site out of the default-visible group set so the
+    # camera sensors (which render geom groups 0/2/3) do not feed an ee_site
+    # blob into the policy. The native / viser debug viewers can re-enable
+    # group 5 to make it visible during inspection.
     gripper = spec.body(EE_BODY)
     gripper.add_site(
         name=EE_SITE,
         pos=(0.0, 0.0, -0.10),
         quat=(1.0, 0.0, 0.0, 0.0),
+        group=5,
     )
 
 
@@ -83,14 +89,22 @@ def get_cube_spec(
     return spec
 
 
-# Wrist camera attached to the gripper body. Tune in the viewer alongside the
-# real D405/RealSense mount.
+# Wrist camera attached to the gripper body. Mount placement is intended to
+# mirror the wowrobo SO-ARM USB camera (lateral mount on the gripper, lens
+# pointing along the gripper toward the jaws / grasp site).
+#
+# Frame convention (gripper-local): -z points toward the grasp site at gripper
+# offset (0, 0, -0.10) — i.e. "forward" along the gripper. ``pos`` is in
+# gripper-local coordinates; ``quat`` is (w, x, y, z) and rotates the camera
+# frame relative to the gripper. Tune both alongside the real mount in the
+# native viewer (``arm-farm-play-native --task=Cube-Rgb``); use
+# ``scripts/sim/_render_cameras.py`` to dump still PNGs of the camera POV.
 WRIST_CAMERA = CameraCfg(
     name="wrist",
     body=EE_BODY,
     fovy=58.0,
-    pos=(0.02, -0.03, 0.0),
-    quat=(0.5, -0.5, -0.5, -0.5),
+    pos=(0.0, 0.06, -0.02),
+    quat=(0.6830127, -0.1830127, -0.1830127, -0.6830127),
 )
 
 

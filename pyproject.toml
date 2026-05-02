@@ -130,12 +130,19 @@ include = ["src", "scripts"]
 
 # `mujoco`'s C-extension members aren't visible to ty's static analysis, so
 # any direct `mujoco.MjModel` / `mujoco.mj_step` / etc. access trips
-# `unresolved-attribute`. Suppress just for the files that touch raw mujoco.
+# `unresolved-attribute`. The capacity-sweep harness also subscripts
+# ``Popen.stdout`` and uses a duck-typed file handle which ty can't narrow.
+# Suppress for the files where the noise outweighs the signal.
 [[tool.ty.overrides]]
 include = [
     "src/arm_farm/sim/assets/so101/so101_constants.py",
     "src/arm_farm/sim/play_native.py",
     "src/arm_farm/sim/tests/test_play_native.py",
+    "scripts/sim/_compare_pipelines.py",
+    "scripts/sim/_env_sweep.py",
+    "scripts/sim/_render_cameras.py",
 ]
 [tool.ty.overrides.rules]
 unresolved-attribute = "ignore"
+invalid-argument-type = "ignore"
+not-subscriptable = "ignore"

@@ -498,11 +498,69 @@ def _reset_to_init_state(model: mujoco.MjModel, data: mujoco.MjData) -> None:
     mujoco.mj_forward(model, data)
 
 
+_WANDB_CACHE_DIR = Path.home() / ".cache" / "arm_farm" / "wandb_onnx"
+
+
+def _resolve_wandb_onnx(
+    run_path: str, onnx_name: str | None = None, cache_dir: Path = _WANDB_CACHE_DIR
+) -> Path:
+    """Download (or reuse cached) ONNX policy from a wandb run.
+
+    ``run_path`` is the standard ``entity/project/run_id`` form (e.g.
+    ``Apptronik/arm-farm-lift-rgb/227y12j9``). ``onnx_name`` is optional;
+    if omitted, picks the only ``.onnx`` file in the run. Cached under
+    ``~/.cache/arm_farm/wandb_onnx/<run_id>/<filename>`` so subsequent
+    rollouts reuse without re-downloading.
+    """
+    import wandb
+
+    api = wandb.Api()
+    run = api.run(run_path)
+    run_id = run_path.rsplit("/", 1)[-1]
+    cache_subdir = cache_dir / run_id
+    cache_subdir.mkdir(parents=True, exist_ok=True)
+
+    onnx_files = [f for f in run.files() if f.name.endswith(".onnx")]
+    if not onnx_files:
+        raise RuntimeError(
+            f"No .onnx files in wandb run {run_path!r}. mjlab uploads ONNX only "
+            "when --agent.upload-model True (the default) AND a save_interval has "
+            "fired at least once."
+        )
+    if onnx_name is None:
+        if len(onnx_files) > 1:
+            names = sorted(f.name for f in onnx_files)
+            raise RuntimeError(
+                f"Run {run_path!r} has multiple .onnx files: {names}. Pass --wandb-onnx-name to disambiguate."
+            )
+        chosen = onnx_files[0]
+    else:
+        candidates = [f for f in onnx_files if f.name.endswith(onnx_name) or Path(f.name).name == onnx_name]
+        if not candidates:
+            available = sorted(f.name for f in onnx_files)
+            raise RuntimeError(f"ONNX {onnx_name!r} not in run {run_path!r}. Available: {available}")
+        chosen = candidates[0]
+
+    local_path = cache_subdir / Path(chosen.name).name
+    if not local_path.exists():
+        logger.info("Downloading ONNX %s from wandb run %s -> %s", chosen.name, run_path, local_path)
+        chosen.download(root=str(cache_subdir), replace=True)
+        # wandb may preserve subdir structure inside chosen.name; normalize.
+        downloaded = cache_subdir / chosen.name
+        if downloaded != local_path and downloaded.exists():
+            downloaded.rename(local_path)
+    else:
+        logger.info("Using cached wandb ONNX at %s", local_path)
+    return local_path
+
+
 def main(
     task: str = "Cube",
     action: ActionSource = "zero",
     sine_period_s: float = 4.0,
     checkpoint: Path | None = None,
+    wandb_run_path: str | None = None,
+    wandb_onnx_name: str | None = None,
     seed: int = 0,
 ) -> None:
     """Open a native-mujoco rollout of a registered task in the viser viewer.
@@ -511,12 +569,22 @@ def main(
         task: registered mjlab task ID (``Cube``, ``Cube-Rgb``, ``Cube-Depth``,
             ``Play``, or any of the upstream mjlab tasks). Defaults to ``Cube``.
         action: scripted action source — ``zero`` (default) | ``random`` |
-            ``sine``. Ignored when ``--checkpoint`` is set.
+            ``sine``. Ignored when ``--checkpoint`` or ``--wandb-run-path`` is set.
         sine_period_s: full-sweep period for the ``sine`` action source.
         checkpoint: path to a mjlab-exported ONNX policy. When provided, the
             policy drives the rollout instead of the scripted action source.
+        wandb_run_path: ``entity/project/run_id`` of a mjlab training run. Mutually
+            exclusive with ``--checkpoint``; downloads the ONNX from wandb (cached
+            under ``~/.cache/arm_farm/wandb_onnx/``) and uses it as the policy.
+        wandb_onnx_name: optional ONNX filename inside the wandb run when
+            multiple are uploaded. Defaults to the only .onnx in the run.
         seed: RNG seed for command resampling and random-action mode.
     """
+    if checkpoint is not None and wandb_run_path is not None:
+        raise SystemExit("Pass either --checkpoint or --wandb-run-path, not both.")
+    if wandb_run_path is not None:
+        checkpoint = _resolve_wandb_onnx(wandb_run_path, wandb_onnx_name)
+
     env_cfg = load_env_cfg(task, play=True)
     env_cfg.scene.num_envs = 1
 

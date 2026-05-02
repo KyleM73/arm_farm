@@ -22,7 +22,7 @@ _VISION_CNN_CFG = {
 _VISION_MODEL_CLS = "mjlab.rl.spatial_softmax:SpatialSoftmaxCNNModel"
 
 
-def make_rl_cfg(experiment_name: str = "so101_cube_rgb") -> RslRlOnPolicyRunnerCfg:
+def make_rl_cfg(experiment_name: str = "arm-farm-lift-rgb") -> RslRlOnPolicyRunnerCfg:
     return RslRlOnPolicyRunnerCfg(
         actor=RslRlModelCfg(
             hidden_dims=(256, 256, 128),
@@ -58,7 +58,8 @@ def make_rl_cfg(experiment_name: str = "so101_cube_rgb") -> RslRlOnPolicyRunnerC
             max_grad_norm=1.0,
         ),
         experiment_name=experiment_name,
-        save_interval=100,
+        wandb_project=experiment_name,
+        save_interval=500,
         num_steps_per_env=24,
         max_iterations=3_000,
         obs_groups={
