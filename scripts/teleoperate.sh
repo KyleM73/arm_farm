@@ -4,6 +4,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -f "$REPO_ROOT/.env" ]]; then set -a; source "$REPO_ROOT/.env"; set +a; fi
 export HF_LEROBOT_HOME="${HF_LEROBOT_HOME:-$REPO_ROOT/data}"
 
 : "${ARM_FARM_FOLLOWER_PORT:?source .env first}"
@@ -13,8 +14,8 @@ export HF_LEROBOT_HOME="${HF_LEROBOT_HOME:-$REPO_ROOT/data}"
 : "${ARM_FARM_FOLLOWER_ID:=follower_01}"
 : "${ARM_FARM_LEADER_ID:=leader_01}"
 
-cameras="{wrist:{type:opencv,index_or_path:$ARM_FARM_WRIST_CAM,width:640,height:480,fps:30},"
-cameras+="front:{type:opencv,index_or_path:$ARM_FARM_FRONT_CAM,width:640,height:480,fps:30}}"
+cameras="{wrist: {type: opencv, index_or_path: $ARM_FARM_WRIST_CAM, width: 640, height: 480, fps: 30}, "
+cameras+="front: {type: opencv, index_or_path: $ARM_FARM_FRONT_CAM, width: 640, height: 480, fps: 30}}"
 
 uv run lerobot-teleoperate \
   --robot.type=so101_follower \

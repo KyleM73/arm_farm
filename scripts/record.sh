@@ -14,6 +14,7 @@ dataset_name="${2:-so101_default}"
 num_episodes="${3:-50}"
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -f "$REPO_ROOT/.env" ]]; then set -a; source "$REPO_ROOT/.env"; set +a; fi
 export HF_LEROBOT_HOME="${HF_LEROBOT_HOME:-$REPO_ROOT/data}"
 
 : "${ARM_FARM_FOLLOWER_PORT:?source .env first}"
@@ -24,8 +25,8 @@ export HF_LEROBOT_HOME="${HF_LEROBOT_HOME:-$REPO_ROOT/data}"
 : "${ARM_FARM_LEADER_ID:=leader_01}"
 : "${HF_USER:=arm_farm}"
 
-cameras="{wrist:{type:opencv,index_or_path:$ARM_FARM_WRIST_CAM,width:640,height:480,fps:30},"
-cameras+="front:{type:opencv,index_or_path:$ARM_FARM_FRONT_CAM,width:640,height:480,fps:30}}"
+cameras="{wrist: {type: opencv, index_or_path: $ARM_FARM_WRIST_CAM, width: 640, height: 480, fps: 30}, "
+cameras+="front: {type: opencv, index_or_path: $ARM_FARM_FRONT_CAM, width: 640, height: 480, fps: 30}}"
 
 uv run lerobot-record \
   --robot.type=so101_follower \

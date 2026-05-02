@@ -4,6 +4,7 @@
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+if [[ -f "$REPO_ROOT/.env" ]]; then set -a; source "$REPO_ROOT/.env"; set +a; fi
 export HF_LEROBOT_HOME="${HF_LEROBOT_HOME:-$REPO_ROOT/data}"
 
 : "${ARM_FARM_FOLLOWER_PORT:?source .env first}"
