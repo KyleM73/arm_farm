@@ -1,0 +1,21 @@
+<?xml version="1.0" ?>
+<!--
+  arm_farm scene wrapper for the SO-ARM101.
+  Includes the vendored kinematic model and adds visual/lighting + a fixed front camera.
+  The terrain plane comes from mjlab's TerrainEntityCfg, so no floor geom here.
+-->
+<mujoco model="so101_scene">
+  <include file="so101.xml"/>
+  <statistic center="0.15 0 0.15" extent="0.6"/>
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3"/>
+    <rgba haze="0.85 0.95 1.0 1"/>
+  </visual>
+  <asset>
+    <texture type="skybox" builtin="gradient" rgb1="0.4 0.5 0.7" rgb2="0 0 0" width="256" height="1536"/>
+  </asset>
+  <worldbody>
+    <light pos="0.3 0 1.0" dir="0 0 -1" castshadow="false"/>
+    <camera name="front" pos="0.45 0 0.30" xyaxes="0 -1 0 0 0 1" fovy="58"/>
+  </worldbody>
+</mujoco>
