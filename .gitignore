@@ -31,3 +31,9 @@ data/
 wandb/
 *.safetensors
 *.ckpt
+
+# Local environment overrides
+.env
+
+# MuJoCo writes this to the cwd when GL extensions are missing.
+MUJOCO_LOG.TXT
