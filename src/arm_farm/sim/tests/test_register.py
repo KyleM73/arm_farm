@@ -1,22 +1,19 @@
-"""Verify the four arm_farm sim tasks land in mjlab's task registry on import."""
+"""Tasks + Robot subclass register on package import (the entry-point contract)."""
 
 from __future__ import annotations
 
 import pytest
 
-# Skip the whole file if mjlab isn't installed (the `sim` extra wasn't synced).
 mjlab = pytest.importorskip("mjlab")
 
 
 def test_arm_farm_tasks_are_registered() -> None:
     from mjlab.tasks.registry import list_tasks
 
-    import arm_farm.sim  # noqa: F401  (import triggers register_mjlab_task calls)
+    import arm_farm.sim  # noqa: F401
 
-    expected = {"Cube", "Cube-Rgb", "Cube-Depth", "Play"}
-    registered = set(list_tasks())
-    missing = expected - registered
-    assert not missing, f"Missing arm_farm sim tasks in mjlab registry: {missing}"
+    missing = {"Cube", "Cube-Rgb", "Cube-Depth", "Play"} - set(list_tasks())
+    assert not missing, f"missing tasks: {missing}"
 
 
 def test_robot_subclass_is_registered() -> None:
@@ -24,8 +21,4 @@ def test_robot_subclass_is_registered() -> None:
 
     import arm_farm.sim  # noqa: F401
 
-    # draccus.ChoiceRegistry exposes registered choice names via _name_to_subclass.
-    names = set(RobotConfig.get_known_choices().keys())
-    assert "mujoco_so101" in names, (
-        f"mujoco_so101 not registered as a RobotConfig choice. Found: {sorted(names)}"
-    )
+    assert "mujoco_so101" in RobotConfig.get_known_choices()
