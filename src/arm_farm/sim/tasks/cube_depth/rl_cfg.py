@@ -8,4 +8,4 @@ from arm_farm.sim.tasks.cube_rgb.rl_cfg import make_rl_cfg as _make_vision_rl_cf
 
 
 def make_rl_cfg() -> RslRlOnPolicyRunnerCfg:
-    return _make_vision_rl_cfg(experiment_name="so101_cube_depth")
+    return _make_vision_rl_cfg(experiment_name="arm-farm-lift-depth")
