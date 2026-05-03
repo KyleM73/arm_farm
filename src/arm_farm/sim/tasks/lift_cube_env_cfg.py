@@ -73,6 +73,15 @@ def make_so101_lift_cube_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
         z=(0.15, 0.25),
     )
 
+    # Push out the joint-velocity-penalty curriculum so it doesn't bite before
+    # the policy has learned to reach. Upstream stages fire at 12k/24k common
+    # steps; doubled to 24k/48k for our 4k-16k env runs.
+    cfg.curriculum["joint_vel_hinge_weight"].params["stages"] = [
+        {"step": 0, "weight": -0.01},
+        {"step": 1000 * 24, "weight": -0.1},
+        {"step": 2000 * 24, "weight": -1.0},
+    ]
+
     cfg.viewer.body_name = EE_BODY
     cfg.viewer.distance = 1.0
     cfg.viewer.elevation = -20.0
