@@ -1,11 +1,5 @@
-"""One-shot camera placement check for the Cube-Rgb task.
-
-Compiles the registered env (single env, native MuJoCo — no mjwarp), resets
-to the home keyframe, samples a default cube/goal pose, and renders the
-``front`` and ``wrist`` cameras at the policy resolution (32x32) and a
-high-res version (256x256). Saves PNGs under
-``outputs/sim/camera_check/``.
-"""
+"""Render front + wrist cameras for the Cube-Rgb task at 32x32 (policy obs)
+and 256x256 (eyeball). Output: ``outputs/sim/camera_check/``."""
 
 from __future__ import annotations
 
@@ -34,9 +28,7 @@ def main() -> None:
     env_cfg.scene.num_envs = 1
     scene = Scene(env_cfg.scene, device="cpu")
     model = scene.compile()
-    # Camera-gizmo size for the overview frustums. MuJoCo default is 0.3.
-    # Bump so the frustums are visible from medium distances; lower if the
-    # gizmos start to occlude the gripper.
+    # MuJoCo default 0.3 leaves the overview frustums too small to read.
     model.vis.scale.camera = 0.6
     data = mujoco.MjData(model)
 
@@ -46,9 +38,7 @@ def main() -> None:
     else:
         mujoco.mj_resetData(model, data)
 
-    # Place the cube near the centre of the OBJECT_RANGE in xy, with z set
-    # so the cube *rests on the floor* — half-size is 0.0125, so the body
-    # centre at z=0.0125 puts the bottom face at z=0.
+    # Cube centred in the OBJECT_RANGE xy, z=half_size so the bottom rests on the floor.
     for jid in range(model.njnt):
         if model.jnt_type[jid] == mujoco.mjtJoint.mjJNT_FREE:
             name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_JOINT, jid)
@@ -63,11 +53,8 @@ def main() -> None:
 
     mujoco.mj_forward(model, data)
 
-    # Geom groups 0,2,3 match what the policy renders (training renderer
-    # also masks geomgroup 1 — collision-only meshes). ``ee_site`` lives at
-    # group 5 to keep it out of the policy POV; we mirror that here by
-    # zeroing all sitegroup entries so neither the front nor the wrist
-    # render shows ee_site/gripperframe markers.
+    # Match the training renderer: geom groups 0/2/3, no sites (ee_site
+    # lives at group 5 to keep it out of the policy POV).
     enabled_groups = (0, 2, 3)
     scene_option = mujoco.MjvOption()
     scene_option.geomgroup[:] = 0
@@ -75,8 +62,6 @@ def main() -> None:
         scene_option.geomgroup[g] = 1
     scene_option.sitegroup[:] = 0
 
-    # Two render passes per camera: 32x32 (matches policy obs) + 256x256
-    # (easier to eyeball placement).
     for camera, mjcf_name in [("front", "robot/front"), ("wrist", "robot/wrist")]:
         for label, hw in [("32", 32), ("256", 256)]:
             renderer = mujoco.Renderer(model, height=hw, width=hw)
@@ -87,10 +72,8 @@ def main() -> None:
             print(f"wrote {out}")
             renderer.close()
 
-    # Free-camera overviews with mjVIS_CAMERA flag enabled — MuJoCo draws
-    # the named cameras (front, wrist) as small frustum gizmos. Sites stay
-    # disabled so the gripperframe / ee_site markers don't clutter the
-    # human-facing inspection.
+    # Free-camera overviews with mjVIS_CAMERA on so front/wrist appear as
+    # frustum gizmos. Sites stay off so the inspection isn't cluttered.
     overview_opt = mujoco.MjvOption()
     overview_opt.geomgroup[:] = 0
     for g in enabled_groups:
@@ -98,19 +81,9 @@ def main() -> None:
     overview_opt.sitegroup[:] = 0
     overview_opt.flags[int(mujoco.mjtVisFlag.mjVIS_CAMERA)] = 1
 
-    # Multiple viewpoints. Each entry is (azimuth_deg, elevation_deg, lookat,
-    # distance). MjvCamera convention: azimuth=0 places the viewer at +x of
-    # lookat; +90 at +y; +180 at -x; +270 at -y. ``elevation`` is the
-    # viewer's pitch above horizontal (negative looks down at the scene).
-    #
-    # The non-top viewpoints all sit on the -y side of the robot so the wrist
-    # camera mounted on +y is silhouetted against the gripper body, making the
-    # mount placement easy to read in a single still.
-    #
-    # * ``iso`` and ``wide_iso``: iso angles framed to capture both cameras.
-    # * ``top``: top-down (azimuth has little effect at -85 elevation).
-    # * ``side``: pure side view from -y.
-    # * ``gripper_zoom``: tight zoom on the wrist mount from -y.
+    # (azimuth_deg, elevation_deg, lookat, distance). MjvCamera azimuth: 0=+x,
+    # 90=+y, 180=-x, 270=-y; elevation is pitch (negative looks down).
+    # All non-top views are at -y so the wrist mount (on +y) is silhouetted.
     views = {
         "iso": (225.0, -25.0, [0.30, 0.0, 0.20], 1.10),
         "wide_iso": (300.0, -25.0, [0.35, 0.0, 0.20], 1.20),
@@ -133,7 +106,6 @@ def main() -> None:
         print(f"wrote {out}")
         renderer.close()
 
-    # Side-by-side at 256 so the user sees both viewpoints in one image.
     stitched = np.concatenate(
         [
             imageio.imread(OUT_DIR / "front_256x256.png"),

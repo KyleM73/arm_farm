@@ -1,11 +1,5 @@
-"""Typed SO-ARM101 hardware presets.
-
-Plain functions that return lerobot config dataclasses populated from
-environment variables. Use these from notebooks, sweep scripts, or any
-Python tool driving lerobot programmatically. The shell scripts in
-`scripts/` read the same env vars and pass them as CLI args directly,
-so the two paths stay in sync.
-"""
+"""SO-ARM101 lerobot config presets, populated from env vars; mirrors what
+the shell scripts pass on the CLI."""
 
 from __future__ import annotations
 

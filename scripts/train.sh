@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Train a behavior cloning policy on a previously recorded local dataset.
-# Usage: ./scripts/train.sh <policy_type> <dataset_name> [extra lerobot-train flags...]
+# Train a behavior cloning policy on a recorded local dataset.
+# Usage: ./scripts/train.sh <act|diffusion|smolvla|pi> <dataset_name> [extra flags...]
 # Example: ./scripts/train.sh act so101_pickplace --batch_size=8 --steps=100000
 #
-# `policy_type` selects the uv extra used so we only pull each policy's
-# heavy deps when actually training with it.
+# Picks the uv extra by policy type so heavy deps are only pulled when used.
 set -euo pipefail
 
 if [[ $# -lt 2 ]]; then

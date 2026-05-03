@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
-# Play (or roll out a checkpoint of) an mjlab task. Default task is `Cube`;
-# pass another task ID as the first arg. Any extra arguments are forwarded
-# to mjlab's `play` CLI verbatim.
+# Play an mjlab task (or roll out a checkpoint). First arg is the task ID
+# (default `Cube`); remaining args forward to mjlab's `play` CLI.
 #
-# Defaults to the viser web viewer (no display / mjpython dance needed);
-# override with `--viewer=native` for the OpenGL window. macOS + native
-# routes through `mjpython` with DYLD_FALLBACK_LIBRARY_PATH pointed at
-# uv's libpython so launch_passive can host the Cocoa main loop.
+# Default viewer is viser; pass `--viewer=native` for an OpenGL window. On
+# macOS + native, re-execs under `mjpython` with DYLD_FALLBACK_LIBRARY_PATH
+# pointed at uv's libpython so launch_passive can host the Cocoa main loop.
 #
 # Examples:
-#   ./scripts/sim/play.sh                              # Cube via viser (web URL printed)
-#   ./scripts/sim/play.sh Play --agent zero            # idle scene, zero actions
-#   ./scripts/sim/play.sh Cube --viewer=native         # native MuJoCo window
-#   ./scripts/sim/play.sh Cube --wandb-run-path <run>  # roll out a trained checkpoint
+#   ./scripts/sim/play.sh                              # Cube via viser
+#   ./scripts/sim/play.sh Play --agent zero
+#   ./scripts/sim/play.sh Cube --viewer=native
+#   ./scripts/sim/play.sh Cube --wandb-run-path <run>  # checkpoint rollout
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
@@ -22,8 +20,7 @@ export HF_LEROBOT_HOME="${HF_LEROBOT_HOME:-$REPO_ROOT/data}"
 TASK="${1:-Cube}"
 shift || true
 
-# Detect a user-supplied --viewer (either `--viewer=X` or `--viewer X`);
-# if absent, default to viser.
+# Detect user-supplied --viewer (either form); default to viser.
 USER_VIEWER=""
 prev=""
 for arg in "$@"; do

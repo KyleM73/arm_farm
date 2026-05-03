@@ -1,10 +1,9 @@
 #!/usr/bin/env bash
-# Train an mjlab task with PPO. Linux + NVIDIA CUDA only; on macOS this will
-# fall back to CPU torch and run unworkably slowly. Outputs land under
-# outputs/sim/<timestamp>-<task>/.
+# Train an mjlab task with PPO. Linux + CUDA only (CPU torch on macOS is
+# unworkably slow). Outputs land under outputs/sim/<timestamp>-<task>/.
 #
 # Examples:
-#   ./scripts/sim/train.sh                                            # Cube
+#   ./scripts/sim/train.sh
 #   ./scripts/sim/train.sh Cube --env.scene.num-envs 4096
 #   ./scripts/sim/train.sh Cube-Depth --agent.max-iterations 3000
 set -euo pipefail
