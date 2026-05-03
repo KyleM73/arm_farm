@@ -10,6 +10,7 @@ from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.sensor import CameraSensorCfg, ContactSensorCfg
 from mjlab.tasks.manipulation import mdp as manipulation_mdp
 from mjlab.tasks.manipulation.lift_cube_env_cfg import make_lift_cube_env_cfg
+from mjlab.tasks.manipulation.mdp import LiftingCommandCfg
 
 from arm_farm.sim.assets.so101 import (
     EE_BODY,
@@ -58,6 +59,19 @@ def make_so101_lift_cube_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
         if sensor.name == "ee_ground_collision":
             assert isinstance(sensor, ContactSensorCfg)
             sensor.primary.pattern = EE_BODY
+
+    lift_cmd = cfg.commands["lift_height"]
+    assert isinstance(lift_cmd, LiftingCommandCfg)
+    lift_cmd.object_pose_range = LiftingCommandCfg.ObjectPoseRangeCfg(
+        x=(0.18, 0.28),
+        y=(-0.15, 0.15),
+        z=(0.02, 0.05),
+    )
+    lift_cmd.target_position_range = LiftingCommandCfg.TargetPositionRangeCfg(
+        x=(0.18, 0.28),
+        y=(-0.15, 0.15),
+        z=(0.15, 0.25),
+    )
 
     cfg.viewer.body_name = EE_BODY
     cfg.viewer.distance = 1.0
