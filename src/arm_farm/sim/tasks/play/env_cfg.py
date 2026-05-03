@@ -79,7 +79,9 @@ def make_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
                 cone="elliptic",
             ),
         ),
-        decimation=4,
+        # 200 Hz physics; decimation=7 → ~28.6 Hz policy obs, approximately
+        # matching the 30 Hz lerobot dataset rate.
+        decimation=7,
         episode_length_s=int(1e9),
         is_finite_horizon=False,
     )

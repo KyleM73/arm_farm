@@ -12,8 +12,7 @@ from arm_farm.sim.tasks.lift_cube_env_cfg import add_camera_obs, make_so101_lift
 
 
 def _rgb_cam(name: str, mjcf_name: str) -> CameraSensorCfg:
-    # 32x32 matches mjlab YAM-Rgb (yam_lift_cube_vision_env_cfg). Bumping to 64
-    # roughly quarters the max parallel-env count on a 32 GiB GPU.
+    # 32x32 matches mjlab YAM-Rgb; bumping to 64 ~quarters max envs on 32 GiB.
     return CameraSensorCfg(
         name=name,
         camera_name=mjcf_name,
@@ -35,19 +34,15 @@ def _rgb_obs(sensor_name: str) -> ObservationTermCfg:
 
 def make_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
     cfg = make_so101_lift_cube_env_cfg(play=play)
-    # First camera (front) goes through the helper, which sets up the camera
-    # obs group and swaps the actor's privileged state for ``goal_position``.
     add_camera_obs(
         cfg,
         camera_cfg=_rgb_cam("front", "robot/front"),
         camera_obs_term=_rgb_obs("front"),
     )
-    # Optional second camera (wrist). The wrist MJCF camera (``robot/wrist``)
-    # is attached to the robot entity via ``so101_constants.WRIST_CAMERA``, so
-    # uncommenting these two lines is the only change needed to feed the
-    # policy a (3, 32, 64) front+wrist concatenation along the width axis.
-    # cfg.scene.sensors = (cfg.scene.sensors or ()) + (_rgb_cam("wrist", "robot/wrist"),)
-    # cfg.observations["camera"].terms["wrist"] = _rgb_obs("wrist")
+    # Wrist camera (``so101_constants.WRIST_CAMERA``) is available for
+    # rendering/overlays. To feed it to the policy, add it to
+    # ``cfg.scene.sensors`` + ``cfg.observations["camera"].terms`` like
+    # ``front`` (yields a ``(3, 32, 64)`` front+wrist concat).
     cfg.events["cube_color"] = EventTermCfg(
         func=dr.geom_rgba,
         mode="reset",
