@@ -2,7 +2,9 @@
 
 PD gains + effort limit are leisaac defaults; MJCF ``sts3215`` armature /
 frictionloss are kept by leaving actuator-cfg overrides at None. Action
-scale follows YAM (``0.25 * effort / stiffness`` ≈ ±2.4° per step at ±1).
+scale is ``0.5 * effort / stiffness`` ≈ ±4.7° per step at ±1 — twice the
+YAM default to shorten the credit-assignment horizon during early
+exploration, while still leaving ~50% actuator-torque headroom.
 """
 
 from __future__ import annotations
@@ -131,7 +133,7 @@ def get_so101_cfg() -> EntityCfg:
     )
 
 
-SO101_ACTION_SCALE: dict[str, float] = dict.fromkeys(ARM_JOINTS, 0.25 * SO101_EFFORT_LIMIT / SO101_STIFFNESS)
+SO101_ACTION_SCALE: dict[str, float] = dict.fromkeys(ARM_JOINTS, 0.5 * SO101_EFFORT_LIMIT / SO101_STIFFNESS)
 
 
 if __name__ == "__main__":
