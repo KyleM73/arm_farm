@@ -471,7 +471,7 @@ def _make_policy_step_fn(ctx: _PolicyCtx) -> StepFn:
             cam = _render_camera_obs(ctx.renderer, data, ctx.vision, ctx.scene_option)
             inputs[ctx.vision.obs_input_name] = cam[None, :]  # (1, C, H, W)
 
-        action = ctx.session.run(None, inputs)[0][0]  # ty: ignore[not-subscriptable]
+        action = ctx.session.run(None, inputs)[0][0]
         ctx.last_action[:] = action
 
         # JointPositionAction: target = raw_action * scale + default_joint_pos.
@@ -501,21 +501,66 @@ def _reset_to_init_state(model: mujoco.MjModel, data: mujoco.MjData) -> None:
 _WANDB_CACHE_DIR = Path.home() / ".cache" / "arm_farm" / "wandb_onnx"
 
 
+def _wandb_lookup_help(api, run_path: str) -> str:
+    """Build a multi-line hint listing available runs / projects for ``run_path``.
+
+    Falls back to a project listing if the project itself is not visible, and
+    to an auth-check suggestion if even that fails. Used to enrich the error
+    raised when ``api.run(run_path)`` cannot resolve the run.
+    """
+    parts = run_path.split("/")
+    if len(parts) != 3:
+        return f"Expected entity/project/run_id form; got {run_path!r}."
+    entity, project, _ = parts
+    try:
+        runs = list(api.runs(f"{entity}/{project}", per_page=50))
+    except Exception:
+        runs = None
+    if runs:
+        lines = [f"Available runs in {entity}/{project} (id  name  state):"]
+        lines.extend(f"  {r.id}  {r.name!r}  {r.state}" for r in runs[:50])
+        if len(runs) > 50:
+            lines.append(f"  ... ({len(runs) - 50} more)")
+        return "\n".join(lines)
+    try:
+        projects = [p.name for p in api.projects(entity)]
+    except Exception:
+        projects = None
+    if projects is not None:
+        return (
+            f"Project {project!r} is empty or not visible to this account. "
+            f"Available projects in {entity}: {projects}"
+        )
+    return (
+        f"Could not list anything under entity {entity!r}. Verify your wandb "
+        "login (e.g. `wandb login --verify`) and that this account is a member "
+        f"of {entity!r}."
+    )
+
+
 def _resolve_wandb_onnx(
     run_path: str, onnx_name: str | None = None, cache_dir: Path = _WANDB_CACHE_DIR
 ) -> Path:
     """Download (or reuse cached) ONNX policy from a wandb run.
 
-    ``run_path`` is the standard ``entity/project/run_id`` form (e.g.
-    ``Apptronik/arm-farm-lift-rgb/227y12j9``). ``onnx_name`` is optional;
+    ``run_path`` is the standard ``entity/project/run_id`` form. ``onnx_name`` is optional;
     if omitted, picks the only ``.onnx`` file in the run. Cached under
     ``~/.cache/arm_farm/wandb_onnx/<run_id>/<filename>`` so subsequent
     rollouts reuse without re-downloading.
+
+    On lookup failure the raised RuntimeError includes the available run IDs
+    in the project, or the available projects in the entity, or an auth-check
+    suggestion if even that listing fails.
     """
+    from wandb.errors import CommError
+
     import wandb
 
     api = wandb.Api()
-    run = api.run(run_path)
+    try:
+        run = api.run(run_path)
+    except (CommError, ValueError) as e:
+        raise RuntimeError(f"wandb run {run_path!r} not found.\n{_wandb_lookup_help(api, run_path)}") from e
     run_id = run_path.rsplit("/", 1)[-1]
     cache_subdir = cache_dir / run_id
     cache_subdir.mkdir(parents=True, exist_ok=True)
