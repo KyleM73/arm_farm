@@ -5,37 +5,28 @@ description = "SO-ARM101 data collection and behavior cloning policies built on 
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    # `feetech` is the SO-ARM100/101 servo SDK; `core_scripts` unlocks
-    # lerobot-record / lerobot-replay / lerobot-teleoperate / lerobot-calibrate.
     "lerobot[feetech,core_scripts]",
 ]
 
 [project.optional-dependencies]
-# Pull these in lazily so a base sync stays slim. Pick one of these (or
-# combine) when you're ready to train: `uv sync --extra act` etc.
+# Per-policy extras; pull one when training. Base sync stays slim.
 training = ["lerobot[training]"]              # accelerate + wandb + dataset
-act = ["lerobot[training]"]                   # ACT ships in core; just needs training stack
+act = ["lerobot[training]"]
 diffusion = ["lerobot[training,diffusion]"]
 smolvla = ["lerobot[training,smolvla]"]
 pi = ["lerobot[training,pi]"]
-kinematics = ["lerobot[kinematics]"]          # placo IK for end-effector teleop
+kinematics = ["lerobot[kinematics]"]          # placo IK
 intelrealsense = ["lerobot[intelrealsense]"]
 all = ["lerobot[all]"]
-# Sim path: mjlab + mujoco-warp. On Linux x86_64 pulls cu128 torch / nvidia
-# warp-lang for training; on macOS arm64 the markers fall back to PyPI torch
-# (CPU) and PyPI warp-lang, which is enough for `play` / `replay` only.
+# cu128 torch + nvidia warp on Linux; PyPI CPU torch + warp on macOS (play/replay only).
 sim = ["mjlab[cu128]", "torch>=2.7.0", "onnxruntime>=1.19.0"]
 
-# Tells mjlab to import `arm_farm.sim` at startup, which registers the
-# Cube / Cube-Rgb / Cube-Depth / Play tasks and the mujoco_so101 Robot.
+# Registers Cube / Cube-Rgb / Cube-Depth / Play tasks + mujoco_so101 Robot.
 [project.entry-points."mjlab.tasks"]
 arm_farm = "arm_farm.sim"
 
-# Native MuJoCo + mjviser preview entry point. Bypasses mjwarp for ~10x
-# faster Mac playback; supports scripted action sources and ONNX policy
-# checkpoints exported by mjlab's `ManipulationOnPolicyRunner`.
 [project.scripts]
-arm-farm-play-native = "arm_farm.sim.play_native:cli"
+preview = "arm_farm.sim.preview:cli"
 
 [dependency-groups]
 dev = [
@@ -46,20 +37,13 @@ dev = [
 
 # ---------------- uv-specific configuration ----------------
 
-# Track the live `main` branch of lerobot. `uv sync` will clone it into the
-# uv git cache and install it into the project venv. Bump the lock with
-# `uv lock --upgrade-package lerobot` to pull a fresher commit.
-#
-# mjlab is also tracked from `main` (post-v1.3.0). The transitive deps
-# below — torch, warp-lang, mujoco, mujoco-warp, mjviser — need their indices
-# replicated here because uv does NOT inherit `[tool.uv.sources]` from non-
-# workspace dependencies; this matches mjlab_playground's pattern.
+# lerobot + mjlab from main. Indices for transitive deps (torch, warp-lang,
+# mujoco, mjviser) must be replicated below — uv doesn't inherit
+# `[tool.uv.sources]` from non-workspace deps.
 [tool.uv.sources]
 lerobot = { git = "https://github.com/huggingface/lerobot.git", branch = "main" }
-# mjlab v1.3.0 pins mujoco-warp to a pre-MuJoCo-3.8.0 commit; py.mujoco.org
-# publishes the 3.8.x dev nightlies which the older mujoco-warp can't import.
-# Tracking mjlab `main` picks up the post-v1.3.0 mujoco 3.8 bump. Refresh
-# with `uv lock --upgrade-package mjlab`.
+# Tracking mjlab main for the post-v1.3.0 mujoco 3.8 bump (v1.3.0 pinned
+# mujoco-warp pre-3.8.0, breaking imports against py.mujoco.org nightlies).
 mjlab = { git = "https://github.com/mujocolab/mjlab", branch = "main" }
 mujoco = { index = "mujoco" }
 mjviser = { git = "https://github.com/mujocolab/mjviser", rev = "1bdfd6fe79066b847a5f430000fcfbb53ec31a6f" }
@@ -86,10 +70,7 @@ name = "mujoco"
 url = "https://py.mujoco.org"
 explicit = true
 
-# Build the `arm_farm` package itself so `import arm_farm` works inside the
-# venv (needed by the typed presets in src/arm_farm/, and later required so
-# lerobot can discover registered custom policies). uv's own build backend
-# auto-detects the src/<package>/ layout.
+# Builds arm_farm as editable so `import arm_farm` works in the venv.
 [build-system]
 requires = ["uv_build>=0.8.4,<0.9.0"]
 build-backend = "uv_build"
@@ -128,16 +109,12 @@ python-version = "3.12"
 [tool.ty.src]
 include = ["src", "scripts"]
 
-# `mujoco`'s C-extension members aren't visible to ty's static analysis, so
-# any direct `mujoco.MjModel` / `mujoco.mj_step` / etc. access trips
-# `unresolved-attribute`. The capacity-sweep harness also subscripts
-# ``Popen.stdout`` and uses a duck-typed file handle which ty can't narrow.
-# Suppress for the files where the noise outweighs the signal.
+# Suppress mujoco C-ext + sweep-harness duck-typing noise that ty can't see.
 [[tool.ty.overrides]]
 include = [
     "src/arm_farm/sim/assets/so101/so101_constants.py",
-    "src/arm_farm/sim/play_native.py",
-    "src/arm_farm/sim/tests/test_play_native.py",
+    "src/arm_farm/sim/preview.py",
+    "src/arm_farm/sim/tests/test_preview.py",
     "scripts/sim/_compare_pipelines.py",
     "scripts/sim/_env_sweep.py",
     "scripts/sim/_render_cameras.py",

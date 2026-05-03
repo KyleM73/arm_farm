@@ -1,10 +1,5 @@
-"""SO-ARM101 entity for mjlab sims.
-
-The MJCF (`xmls/so101.xml`) is vendored from
-https://github.com/TheRobotStudio/SO-ARM100 (Apache-2.0). The local scene wrapper
-adds an end-effector site and front camera; the wrist camera is attached via
-`EntityCfg.cameras`.
-"""
+"""SO-ARM101 mjlab entity. MJCF vendored from TheRobotStudio/SO-ARM100
+(Apache-2.0); local wrapper adds the ee_site, front camera, wrist camera."""
 
 from arm_farm.sim.assets.so101.so101_constants import (
     ARM_JOINTS,

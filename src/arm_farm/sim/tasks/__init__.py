@@ -1,7 +1,4 @@
-"""SO-ARM101 mjlab tasks.
-
-Importing each subpackage triggers ``register_mjlab_task`` for one task ID.
-"""
+"""SO-ARM101 mjlab tasks; each subpackage registers one task ID."""
 
 from arm_farm.sim.tasks import cube as _cube  # noqa: F401
 from arm_farm.sim.tasks import cube_depth as _cube_depth  # noqa: F401

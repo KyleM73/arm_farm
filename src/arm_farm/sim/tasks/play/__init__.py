@@ -1,9 +1,5 @@
-"""Idle preview task — registered as ``Play``.
-
-Robot + cube + plane, no rewards, no terminations beyond timeout, infinite
-episode length. Useful as a smoke check on Mac (`play.sh Play --agent zero`)
-before any RL plumbing is wired up.
-"""
+"""Idle preview task — registered as ``Play``. Robot + cube + plane; no
+rewards, infinite episode. Smoke-test target on Mac."""
 
 from mjlab.tasks.registry import register_mjlab_task
 

@@ -1,10 +1,6 @@
-"""arm_farm sim package.
+"""Registers Cube/Cube-Rgb/Cube-Depth/Play tasks and the mujoco_so101 Robot.
 
-Importing this module registers the SO-ARM101 mjlab tasks (`Cube`, `Cube-Rgb`,
-`Cube-Depth`, `Play`) via ``mjlab.tasks.registry.register_mjlab_task``. mjlab
-discovers this package through the ``mjlab.tasks`` entry point declared in
-``pyproject.toml`` and imports it during ``mjlab`` startup.
-"""
+Loaded by mjlab via the ``mjlab.tasks`` entry point in ``pyproject.toml``."""
 
 from arm_farm.sim import lerobot_robot as _lerobot_robot  # noqa: F401  (registers Robot)
 from arm_farm.sim import tasks as _tasks  # noqa: F401  (registers tasks)

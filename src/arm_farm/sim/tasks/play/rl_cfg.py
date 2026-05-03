@@ -1,8 +1,4 @@
-"""Trivial RL cfg for ``Play``.
-
-The Play task isn't trained — `train Play` would be a no-op — but mjlab's
-registry still expects an rl_cfg, so register a tiny MLP that nobody uses.
-"""
+"""Stub rl_cfg for ``Play``; mjlab's registry requires one."""
 
 from __future__ import annotations
 

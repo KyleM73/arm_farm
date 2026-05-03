@@ -1,18 +1,8 @@
-"""SO-ARM101 mjlab sim, wrapped as a lerobot ``Robot``.
+"""SO-ARM101 mjlab sim wrapped as a lerobot ``Robot``.
 
-The wrapper builds a tiny mjlab env on ``connect()`` (reuses the ``Play``
-task's env config but switches the joint position action term to absolute
-mode) and exposes joint positions in lerobot's normalised motor units.
-``lerobot-replay --robot.type=mujoco_so101`` then drives it with recorded
-SO-ARM101 datasets without any remapping.
-
-Two viewer backends are supported (selected via ``--robot.viewer=...``):
-``native`` for MuJoCo's OpenGL window, ``viser`` for a web viewer the user
-opens in a browser. ``none`` skips the viewer entirely.
-
-Cameras are not surfaced yet: ``observation_features`` is joint positions
-only. Add ``CameraSensorCfg``s to the env and extend ``get_observation`` once
-visual sim2real is in scope.
+Reuses the ``Play`` env with the joint-position action switched to absolute
+mode and exposes joint positions in lerobot units. ``observation_features``
+is joints only — extend ``get_observation`` when visual sim2real is in scope.
 """
 
 from __future__ import annotations
@@ -49,16 +39,10 @@ def _rad_to_norm(joint: str, rad: float, lo: float, hi: float) -> float:
 
 
 def _build_replay_env_cfg(decimation: int) -> ManagerBasedRlEnvCfg:
-    """Reuse the ``Play`` task's scene + sim, but swap to absolute joint targets.
-
-    With ``scale=1.0`` and ``use_default_offset=False`` each incoming action is
-    interpreted as a joint configuration in radians, matching how
-    ``lerobot-replay`` feeds back recorded targets.
-    """
+    """``Play`` env with absolute-radian joint targets (matches recorded actions)."""
     cfg = _make_play_env_cfg(play=True)
-    # Replay drives one env from a single recorded trajectory; clamp back
-    # to 1 even though the Play task defaults to a 16-env viser grid.
     cfg.scene.num_envs = 1
+
     cfg.decimation = decimation
     action = cfg.actions["joint_pos"]
     assert isinstance(action, JointPositionActionCfg)
@@ -68,13 +52,9 @@ def _build_replay_env_cfg(decimation: int) -> ManagerBasedRlEnvCfg:
 
 
 class MujocoSO101(Robot):
-    """SO-ARM101 simulated via mjlab.
-
-    Action and observation values are in lerobot's normalised motor units
-    (arm joints: [-100, 100]; gripper: [0, 100]). The wrapper converts
-    to/from sim radians using the joint ranges read from the compiled
-    ``mujoco.MjModel`` so any MJCF edit is picked up automatically.
-    """
+    """SO-ARM101 mjlab sim. Joint values in lerobot units (arm
+    ``[-100, 100]``, gripper ``[0, 100]``); ranges are read from the
+    compiled ``MjModel`` so MJCF edits propagate."""
 
     config_class = MujocoSO101RobotConfig
     name = "mujoco_so101"
@@ -113,14 +93,13 @@ class MujocoSO101(Robot):
         return
 
     def connect(self, calibrate: bool = True) -> None:
-        del calibrate  # interface signature; unused by the sim wrapper
+        del calibrate  # required by Robot interface
         device = "cuda:0" if torch.cuda.is_available() else "cpu"
         env_cfg = _build_replay_env_cfg(decimation=self.config.decimation)
         env = ManagerBasedRlEnv(cfg=env_cfg, device=device)
         env.reset(seed=self.config.seed)
 
-        # Cache joint name → index and joint ranges from the entity so
-        # send_action / get_observation don't hit O(n) lookups per step.
+        # Cache joint indices + ranges so per-step ops don't hit O(n) lookups.
         robot = env.scene["robot"]
         self._joint_idx = {name: i for i, name in enumerate(robot.joint_names)}
         limits = robot.data.joint_pos_limits[0]  # (n_joints, 2)
@@ -138,9 +117,8 @@ class MujocoSO101(Robot):
         if backend == "none":
             return
         if backend == "native":
-            # mjwarp's `sim.step` syncs GPU state back into mj_data, so a
-            # passive Handle bound to (mj_model, mj_data) reflects the
-            # current rollout without any custom mjlab viewer machinery.
+            # mjwarp's sim.step syncs GPU state into mj_data, so a passive
+            # Handle on (mj_model, mj_data) follows the rollout for free.
             self._native_viewer = mujoco.viewer.launch_passive(env.sim.mj_model, env.sim.mj_data)
             return
         if backend == "viser":
