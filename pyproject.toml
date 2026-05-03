@@ -27,6 +27,7 @@ arm_farm = "arm_farm.sim"
 
 [project.scripts]
 preview = "arm_farm.sim.preview:cli"
+convert2onnx = "arm_farm.sim.convert_pt_to_onnx:cli"
 
 [dependency-groups]
 dev = [
