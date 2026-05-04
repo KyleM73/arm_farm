@@ -228,3 +228,39 @@ def test_reward_ctx_covers_every_env_cfg_term() -> None:
     for fn, name in zip(rctx.fns, rctx.names, strict=True):
         val = fn(model, data, ctx)
         assert math.isfinite(val), f"reward {name} returned {val}"
+
+
+def test_object_is_lifted_fires_above_threshold() -> None:
+    """``lifted`` indicator must read 0 when the cube rests on the table and 1
+    when it's teleported above ``minimal_height``. Locks the threshold semantics
+    against accidental sign flips or world/local-frame mixups."""
+    import mujoco
+
+    from arm_farm.sim.preview import _build_reward_ctx
+    from arm_farm.sim.tasks.lift_cube_env_cfg import LIFTED_HEIGHT_THRESHOLD
+
+    env_cfg, model, data = _compile("Cube")
+    ctx = _make_minimal_policy_ctx(env_cfg, model)
+    rctx = _build_reward_ctx(env_cfg)
+    assert "lifted" in rctx.names
+    lifted_fn = rctx.fns[rctx.names.index("lifted")]
+    lifted_weight = rctx.weights[rctx.names.index("lifted")]
+    assert lifted_weight == 4.0
+
+    cube_qpos = ctx.sampler.cube_qpos_adr
+
+    # Resting cube (just above table by half-edge): below threshold -> 0.
+    data.qpos[cube_qpos : cube_qpos + 3] = [0.22, 0.0, 0.0125]
+    data.qpos[cube_qpos + 3 : cube_qpos + 7] = [1.0, 0.0, 0.0, 0.0]
+    mujoco.mj_forward(model, data)
+    assert lifted_fn(model, data, ctx) == 0.0
+
+    # Cube parked just below the threshold: still 0 (tests the boundary).
+    data.qpos[cube_qpos + 2] = LIFTED_HEIGHT_THRESHOLD - 1e-3
+    mujoco.mj_forward(model, data)
+    assert lifted_fn(model, data, ctx) == 0.0
+
+    # Cube hoisted clearly above the threshold: indicator fires.
+    data.qpos[cube_qpos + 2] = LIFTED_HEIGHT_THRESHOLD + 0.05
+    mujoco.mj_forward(model, data)
+    assert lifted_fn(model, data, ctx) == 1.0

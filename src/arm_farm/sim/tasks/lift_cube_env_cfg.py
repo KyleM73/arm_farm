@@ -6,6 +6,7 @@ from mjlab.entity import EntityCfg
 from mjlab.envs import ManagerBasedRlEnvCfg
 from mjlab.envs.mdp.actions import JointPositionActionCfg
 from mjlab.managers import ObservationGroupCfg, ObservationTermCfg
+from mjlab.managers.reward_manager import RewardTermCfg
 from mjlab.managers.scene_entity_config import SceneEntityCfg
 from mjlab.sensor import CameraSensorCfg, ContactSensorCfg
 from mjlab.tasks.manipulation import mdp as manipulation_mdp
@@ -19,6 +20,9 @@ from arm_farm.sim.assets.so101 import (
     get_cube_spec,
     get_so101_cfg,
 )
+from arm_farm.sim.tasks.rewards import object_is_lifted
+
+LIFTED_HEIGHT_THRESHOLD: float = 0.04
 
 # Play-mode default: viser arranges the envs in a grid for variance read-out.
 PLAY_NUM_ENVS: int = 4
@@ -53,6 +57,13 @@ def make_so101_lift_cube_env_cfg(play: bool = False) -> ManagerBasedRlEnvCfg:
     # that target them rather than silently masking mjlab's assertion.
     for k in ("fingertip_friction_slide", "fingertip_friction_spin", "fingertip_friction_roll"):
         cfg.events.pop(k, None)
+
+    # Discrete "off-the-table" indicator.
+    cfg.rewards["lifted"] = RewardTermCfg(
+        func=object_is_lifted,
+        weight=4.0,
+        params={"object_name": "cube", "minimal_height": LIFTED_HEIGHT_THRESHOLD},
+    )
 
     assert cfg.scene.sensors is not None
     for sensor in cfg.scene.sensors:

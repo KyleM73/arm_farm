@@ -18,9 +18,9 @@ export MUJOCO_GL="${MUJOCO_GL:-egl}"
 TASK="${1:-Cube}"
 shift || true
 
-OUT_DIR="$REPO_ROOT/outputs/sim/$(date +%Y%m%dT%H%M%S)-$TASK"
-mkdir -p "$OUT_DIR"
+LOG_ROOT="$REPO_ROOT/outputs/sim/training_runs"
+mkdir -p "$LOG_ROOT"
 
 uv run --extra sim train "$TASK" \
-  --output_dir "$OUT_DIR" \
+  --log-root "$LOG_ROOT" \
   "$@"

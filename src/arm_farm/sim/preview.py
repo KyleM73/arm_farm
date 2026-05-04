@@ -457,6 +457,9 @@ def _build_reward_ctx(env_cfg: ManagerBasedRlEnvCfg) -> _RewardCtx:
         elif func_name == "joint_velocity_hinge_penalty":
             max_vel = float(term.params["max_vel"])
             fn = _make_joint_vel_hinge_fn(max_vel)
+        elif func_name == "object_is_lifted":
+            minimal_height = float(term.params["minimal_height"])
+            fn = _make_object_is_lifted_fn(minimal_height)
         else:
             logger.warning(
                 "Reward term %r (func=%s) not implemented natively; plotted as 0.",
@@ -529,6 +532,15 @@ def _make_joint_vel_hinge_fn(
         qvel = data.qvel[ctx.joint_qvel_adrs]
         excess = np.clip(np.abs(qvel) - max_vel, a_min=0.0, a_max=None)
         return float(np.square(excess).sum())
+
+    return fn
+
+
+def _make_object_is_lifted_fn(
+    minimal_height: float,
+) -> Callable[[mujoco.MjModel, mujoco.MjData, _PolicyCtx], float]:
+    def fn(model: mujoco.MjModel, data: mujoco.MjData, ctx: _PolicyCtx) -> float:
+        return 1.0 if float(data.xpos[ctx.cube_body_id, 2]) > minimal_height else 0.0
 
     return fn
 
@@ -1444,6 +1456,7 @@ def main(
 
     def _build_step_fn(ctx: _PolicyCtx | None) -> StepFn:
         if ctx is not None:
+
             def on_camera_obs(frames: list[np.ndarray], _ctx=ctx) -> None:
                 if _ctx.vision is None:
                     return
@@ -1484,7 +1497,8 @@ def main(
             reset_fn(model, data)
             viewer._step_fn = _build_step_fn(new_ctx)
         cam_desc = (
-            "camera=" + ",".join(
+            "camera="
+            + ",".join(
                 f"{c.obs_term_name}({c.data_type} {c.height}x{c.width})" for c in new_ctx.vision.cameras
             )
             if new_ctx.vision is not None
@@ -1492,7 +1506,10 @@ def main(
         )
         logger.info(
             "Loaded policy: onnx=%s, obs_names=%s, decimation=%d, %s",
-            onnx_path, new_ctx.obs_names, new_ctx.decimation, cam_desc,
+            onnx_path,
+            new_ctx.obs_names,
+            new_ctx.decimation,
+            cam_desc,
         )
 
     viewer = Viewer(model, data, step_fn=_build_step_fn(holder.ctx), reset_fn=reset_fn, server=server)
@@ -1502,9 +1519,7 @@ def main(
         cam_panels = _add_camera_panels(server, holder.ctx.vision)
         obs_camera_mjcf_names = {c.camera_name_in_model for c in holder.ctx.vision.cameras}
 
-    preview_cams = _build_preview_cameras(
-        model, preview_cameras, obs_camera_mjcf_names, env_cfg, mode="rgb"
-    )
+    preview_cams = _build_preview_cameras(model, preview_cameras, obs_camera_mjcf_names, env_cfg, mode="rgb")
     preview_panels = _add_preview_camera_panels(server, preview_cams, folder_label="Camera preview (RGB)")
     # Sibling depth row: same MJCF cameras, same toggles, separate renderers
     # (depth-rendering must be enabled on construction, so renderers can't
@@ -1566,9 +1581,7 @@ def main(
     preview_panel_dirty = [False]  # True while RGB panel HTML still shows a stale frame
     depth_preview_panel_dirty = [False]
 
-    def _pump_preview_row(
-        cams: list[_PreviewCamera], panels: dict[str, Any], dirty: list[bool]
-    ) -> None:
+    def _pump_preview_row(cams: list[_PreviewCamera], panels: dict[str, Any], dirty: list[bool]) -> None:
         if not panels:
             return
         if any(c.enabled for c in cams):
@@ -1587,11 +1600,7 @@ def main(
             rendered: list[tuple[str, np.ndarray]] = []
             for cam, r in staged:
                 frame = r.render()
-                display = (
-                    _depth_render_to_display_rgb(frame, cam.cutoff_m)
-                    if cam.mode == "depth"
-                    else frame
-                )
+                display = _depth_render_to_display_rgb(frame, cam.cutoff_m) if cam.mode == "depth" else frame
                 rendered.append((cam.label, _upscale_for_panel(display)))
             panels["_html"].content = _row_html(rendered)
             dirty[0] = True
