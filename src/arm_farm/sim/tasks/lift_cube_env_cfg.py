@@ -20,7 +20,7 @@ from arm_farm.sim.assets.so101 import (
     get_cube_spec,
     get_so101_cfg,
 )
-from arm_farm.sim.tasks.rewards import object_is_lifted
+from arm_farm.sim.tasks.mdp import object_is_lifted
 
 LIFTED_HEIGHT_THRESHOLD: float = 0.04
 
